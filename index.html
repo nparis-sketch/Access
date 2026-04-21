@@ -1,107 +1,162 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 const steps = [
   {
+    id: 1,
     topline: "ACCESS POINT DETECTED",
     prompt: "What did this code physically prompt you to do?",
     subprompt: "Did you reach for your phone? Lift your arm?",
   },
   {
+    id: 2,
     topline: "SCAN RESPONSE LOG",
     prompt: "Did you look at the collage first, or try to get through it?",
   },
   {
+    id: 3,
     topline: "SPATIAL SHIFT REGISTERED",
     prompt: "How did the QR code change how you navigated through Hillyer?",
   },
   {
+    id: 4,
     topline: "ACCESS EXPECTATION",
     prompt: "What did you expect to receive?",
   },
   {
+    id: 5,
     topline: "SYMBOL RECOGNITION",
     prompt: "When did you learn what this symbol means?",
   },
   {
+    id: 6,
     topline: "PROJECT INFO",
-    isProjectInfo: true,
     title: "Access Pending",
     body: "This project uses QR codes in collage to question how symbols of access shape movement, expectation, and the experience of space.",
     footer: "Inspired by Roopa Vasudevan’s Slow Response (2021–present).",
+    isProjectInfo: true,
   },
 ];
 
-export default function QRProjectWebsite() {
-  const [stepIndex, setStepIndex] = useState(0);
+function SymbolBlock() {
+  return (
+    <div className="symbol" aria-hidden="true">
+      <span className="sq a" />
+      <span className="sq b" />
+      <span className="sq c" />
+      <span className="sq d" />
+      <span className="sq e" />
+      <span className="sq f" />
+      <span className="sq g" />
+      <span className="sq h" />
+      <span className="sq i" />
+    </div>
+  );
+}
 
-  const currentStep = useMemo(() => steps[stepIndex], [stepIndex]);
-  const isLastStep = stepIndex === steps.length - 1;
+function SpiralField({ fragments }) {
+  const positions = useMemo(() => {
+    return fragments.map((fragment, index) => {
+      const angle = index * 0.95;
+      const radius = 18 + index * 20;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius * 0.72;
+      const rotation = angle * 57.2958 + 90;
+      const opacity = Math.min(0.1 + index * 0.08, 0.42);
 
-  const nextStep = () => {
-    if (!isLastStep) {
-      setStepIndex((prev) => prev + 1);
-      if (typeof window !== "undefined") {
-        window.scrollTo({ top: 0, behavior: "auto" });
-      }
-    }
-  };
+      return {
+        fragment,
+        style: {
+          transform: `translate(${x}px, ${y}px) rotate(${rotation}deg)`,
+          opacity,
+        },
+      };
+    });
+  }, [fragments]);
 
   return (
-    <>
+    <div className="spiral-field" aria-hidden="true">
+      <div className="spiral-core" />
+      {positions.map((item, index) => (
+        <span className="spiral-text" key={`${item.fragment}-${index}`} style={item.style}>
+          {item.fragment}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+export default function QRProjectWebsite() {
+  const [stepIndex, setStepIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const currentStep = steps[stepIndex];
+  const isLastStep = stepIndex === steps.length - 1;
+
+  const spiralFragments = useMemo(() => {
+    return steps
+      .slice(0, stepIndex + 1)
+      .map((step) => (step.isProjectInfo ? step.title : step.prompt))
+      .filter(Boolean);
+  }, [stepIndex]);
+
+  const nextStep = () => {
+    if (isLastStep || isTransitioning) return;
+    setIsTransitioning(true);
+    window.setTimeout(() => {
+      setStepIndex((prev) => prev + 1);
+      window.scrollTo({ top: 0, behavior: "auto" });
+      setIsTransitioning(false);
+    }, 220);
+  };
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === "ArrowRight" || event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        nextStep();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [stepIndex, isTransitioning, isLastStep]);
+
+  return (
+    <div className="qr-site-root">
       <style>{`
         * {
           box-sizing: border-box;
         }
 
         html, body, #root {
-          min-height: 100%;
           margin: 0;
+          min-height: 100%;
+          background: #050505;
         }
 
         body {
           font-family: 'Press Start 2P', system-ui, sans-serif;
-          background:
-            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px),
-            #050505;
-          background-size: 24px 24px;
-          color: #f5f5f5;
         }
 
         .qr-site-root {
           min-height: 100vh;
           width: 100%;
+          color: #f3f3f3;
           background:
-            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px),
+            linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
+            radial-gradient(circle at center, rgba(255,255,255,0.035), rgba(0,0,0,0.18) 50%, rgba(0,0,0,0.72)),
             #050505;
-          background-size: 24px 24px;
-          color: #f5f5f5;
-        }
-
-        .screen {
-          min-height: 100vh;
-          width: 100%;
-          padding: 32px 22px 40px;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
+          background-size: 24px 24px, 24px 24px, cover, auto;
           position: relative;
           overflow: hidden;
         }
 
-        .screen::before {
+        .qr-site-root::after {
           content: "";
-          position: absolute;
+          position: fixed;
           inset: 0;
-          background: radial-gradient(circle at center, rgba(255,255,255,0.05), rgba(0,0,0,0.2) 60%, rgba(0,0,0,0.55));
           pointer-events: none;
-        }
-
-        .screen::after {
-          content: "";
-          position: absolute;
-          inset: 0;
           background: repeating-linear-gradient(
             to bottom,
             rgba(255,255,255,0.03) 0px,
@@ -109,64 +164,127 @@ export default function QRProjectWebsite() {
             transparent 2px,
             transparent 4px
           );
-          opacity: 0.35;
-          pointer-events: none;
+          opacity: 0.28;
         }
 
-        .content,
-        .nav {
+        .screen {
+          min-height: 100vh;
+          width: 100%;
+          padding: 28px 22px 32px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
           position: relative;
-          z-index: 1;
+          transition: opacity 0.22s ease, transform 0.22s ease;
+          opacity: 1;
+          transform: translateX(0);
+        }
+
+        .screen.is-transitioning {
+          opacity: 0;
+          transform: translateX(-22px);
         }
 
         .topline {
           font-size: 10px;
-          line-height: 1.8;
-          color: #8f8f8f;
+          line-height: 1.9;
           letter-spacing: 0.08em;
-          margin-bottom: 24px;
+          color: #8f8f8f;
+          margin-bottom: 28px;
+        }
+
+        .content {
+          position: relative;
+          z-index: 2;
+          max-width: 900px;
+          margin-top: 8vh;
+        }
+
+        .spiral-field {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1;
+          pointer-events: none;
+          overflow: hidden;
+        }
+
+        .spiral-core {
+          position: absolute;
+          width: 18px;
+          height: 18px;
+          border: 2px solid rgba(255,255,255,0.4);
+          transform: rotate(45deg);
+          box-shadow: 0 0 16px rgba(255,255,255,0.08);
+        }
+
+        .spiral-text {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          transform-origin: center;
+          font-size: 9px;
+          line-height: 1;
+          color: #d8d8d8;
+          white-space: nowrap;
+          text-shadow: 0 0 10px rgba(255,255,255,0.06);
+          transition: opacity 0.3s ease, transform 0.3s ease;
         }
 
         .symbol {
-          width: 72px;
-          height: 72px;
-          margin-bottom: 28px;
-          background:
-            linear-gradient(90deg, #f5f5f5 0 18%, transparent 18% 28%, #f5f5f5 28% 44%, transparent 44% 56%, #f5f5f5 56% 100%),
-            linear-gradient(#f5f5f5 0 18%, transparent 18% 28%, #f5f5f5 28% 44%, transparent 44% 56%, #f5f5f5 56% 100%);
-          background-blend-mode: screen;
-          opacity: 0.85;
-          outline: 4px solid #f5f5f5;
-          outline-offset: 6px;
+          position: relative;
+          width: 86px;
+          height: 86px;
+          margin-bottom: 34px;
+          border: 3px solid #f3f3f3;
+          box-shadow: 0 0 18px rgba(255,255,255,0.08);
+          background: rgba(0,0,0,0.26);
         }
 
+        .sq {
+          position: absolute;
+          background: #f3f3f3;
+        }
+
+        .a { left: 8px; top: 8px; width: 18px; height: 18px; }
+        .b { right: 8px; top: 8px; width: 18px; height: 18px; }
+        .c { left: 8px; bottom: 8px; width: 18px; height: 18px; }
+        .d { left: 34px; top: 18px; width: 10px; height: 10px; }
+        .e { left: 50px; top: 34px; width: 12px; height: 12px; }
+        .f { left: 24px; top: 50px; width: 12px; height: 12px; }
+        .g { right: 18px; bottom: 20px; width: 10px; height: 10px; }
+        .h { left: 46px; bottom: 10px; width: 18px; height: 18px; }
+        .i { right: 34px; top: 50px; width: 10px; height: 10px; }
+
         .prompt {
-          font-size: 22px;
-          line-height: 1.8;
-          max-width: 720px;
+          font-size: 24px;
+          line-height: 1.95;
+          max-width: 760px;
           text-shadow: 0 0 10px rgba(255,255,255,0.08);
         }
 
         .subprompt {
-          margin-top: 22px;
+          margin-top: 20px;
           font-size: 14px;
-          line-height: 2;
-          color: #c9c9c9;
-          max-width: 720px;
+          line-height: 2.1;
+          color: #cccccc;
+          max-width: 760px;
         }
 
         .project-title {
-          font-size: 28px;
-          line-height: 1.6;
           margin: 0 0 24px;
+          font-size: 30px;
+          line-height: 1.6;
         }
 
         .project-text {
-          font-size: 13px;
-          line-height: 2.1;
-          color: #d0d0d0;
-          max-width: 760px;
           margin: 0;
+          max-width: 760px;
+          font-size: 13px;
+          line-height: 2.2;
+          color: #d2d2d2;
         }
 
         .project-footer {
@@ -174,36 +292,45 @@ export default function QRProjectWebsite() {
         }
 
         .nav {
+          position: relative;
+          z-index: 2;
           display: flex;
           justify-content: flex-end;
           align-items: center;
-          margin-top: 40px;
+          min-height: 44px;
         }
 
         .arrow {
           border: 0;
           background: transparent;
-          color: #f5f5f5;
+          color: #f3f3f3;
           font-family: inherit;
-          font-size: 28px;
+          font-size: 32px;
+          line-height: 1;
           cursor: pointer;
-          padding: 8px 4px;
-          text-shadow: 0 0 10px rgba(255,255,255,0.2);
+          padding: 4px 0;
+          text-shadow: 0 0 14px rgba(255,255,255,0.2);
+          transition: transform 0.16s ease, color 0.16s ease;
         }
 
         .arrow:hover {
           color: #9fe870;
+          transform: translateX(4px);
         }
 
         .arrow:focus-visible {
           outline: 2px solid #9fe870;
-          outline-offset: 8px;
+          outline-offset: 10px;
         }
 
         @media (max-width: 640px) {
+          .content {
+            margin-top: 6vh;
+          }
+
           .prompt {
             font-size: 16px;
-            line-height: 1.9;
+            line-height: 2.05;
           }
 
           .subprompt,
@@ -212,56 +339,66 @@ export default function QRProjectWebsite() {
           }
 
           .project-title {
-            font-size: 20px;
+            font-size: 22px;
+          }
+
+          .spiral-text {
+            font-size: 7px;
           }
 
           .symbol {
-            width: 56px;
-            height: 56px;
+            width: 68px;
+            height: 68px;
+            margin-bottom: 28px;
           }
+
+          .a, .b, .c { width: 14px; height: 14px; }
+          .a { left: 7px; top: 7px; }
+          .b { right: 7px; top: 7px; }
+          .c { left: 7px; bottom: 7px; }
+          .d { left: 27px; top: 14px; width: 8px; height: 8px; }
+          .e { left: 40px; top: 27px; width: 10px; height: 10px; }
+          .f { left: 18px; top: 40px; width: 10px; height: 10px; }
+          .g { right: 14px; bottom: 14px; width: 8px; height: 8px; }
+          .h { left: 38px; bottom: 8px; width: 14px; height: 14px; }
+          .i { right: 26px; top: 40px; width: 8px; height: 8px; }
         }
       `}</style>
 
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      <link
-        href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
-        rel="stylesheet"
-      />
+      <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
 
-      <main className="qr-site-root">
-        <section className="screen" aria-live="polite">
-          <div className="content">
-            <div className="topline">{currentStep.topline}</div>
-            {!currentStep.isProjectInfo && <div className="symbol" aria-hidden="true" />}
+      <main className={`screen ${isTransitioning ? "is-transitioning" : ""}`}>
+        <SpiralField fragments={spiralFragments} />
 
-            {currentStep.isProjectInfo ? (
-              <>
-                <h1 className="project-title">{currentStep.title}</h1>
-                <p className="project-text">{currentStep.body}</p>
-                <p className="project-text project-footer">{currentStep.footer}</p>
-              </>
-            ) : (
-              <>
-                <div className="prompt">{currentStep.prompt}</div>
-                {currentStep.subprompt ? (
-                  <div className="subprompt">{currentStep.subprompt}</div>
-                ) : null}
-              </>
-            )}
-          </div>
+        <div className="content">
+          <div className="topline">{currentStep.topline}</div>
 
-          {!isLastStep ? (
-            <div className="nav">
-              <button className="arrow" onClick={nextStep} aria-label="Next">
-                →
-              </button>
-            </div>
+          {!currentStep.isProjectInfo ? <SymbolBlock /> : null}
+
+          {currentStep.isProjectInfo ? (
+            <>
+              <h1 className="project-title">{currentStep.title}</h1>
+              <p className="project-text">{currentStep.body}</p>
+              <p className="project-text project-footer">{currentStep.footer}</p>
+            </>
           ) : (
-            <div className="nav" />
+            <>
+              <div className="prompt">{currentStep.prompt}</div>
+              {currentStep.subprompt ? <div className="subprompt">{currentStep.subprompt}</div> : null}
+            </>
           )}
-        </section>
+        </div>
+
+        <div className="nav">
+          {!isLastStep ? (
+            <button className="arrow" onClick={nextStep} aria-label="Next screen">
+              →
+            </button>
+          ) : null}
+        </div>
       </main>
-    </>
+    </div>
   );
 }
